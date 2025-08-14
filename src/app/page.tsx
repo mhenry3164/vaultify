@@ -1,103 +1,207 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { LoginForm } from '@/components/auth/LoginForm';
+import { Shield, Camera, List, FileText, LogOut } from 'lucide-react';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { user, loading, logout } = useAuth();
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState('upload');
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginForm />;
+  }
+
+  const tabs = [
+    { id: 'upload', label: 'Upload', icon: Camera, href: '/upload' },
+    { id: 'inventory', label: 'Inventory', icon: List, href: '/inventory' },
+    { id: 'policy', label: 'Policy', icon: FileText, href: '/policy' }
+  ];
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Header */}
+      <header className="bg-surface/80 backdrop-blur-sm border-b border-border/10 px-6 py-4 flex items-center justify-between safe-top">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center">
+            <Shield className="w-5 h-5 text-accent-foreground" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold">Asset Snap</h1>
+            <p className="text-xs text-muted">by Vaultify</p>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={logout}
+          className="p-2 hover:bg-surface-hover rounded-full transition-all active:scale-95 flex items-center gap-2 text-muted-foreground"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <LogOut className="w-5 h-5" />
+        </button>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Tab Navigation */}
+        <nav className="bg-surface px-6 py-3 border-b border-border/10">
+          <div className="flex space-x-1 bg-background/50 backdrop-blur-sm rounded-xl p-1 shadow-sm">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  router.push(tab.href);
+                }}
+                className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-xl transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-accent text-accent-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-surface-hover'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span className="text-sm font-medium">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        {/* Content Area */}
+        <div className="flex-1 px-6 py-8">
+          {activeTab === 'upload' && (
+            <div className="space-y-8 max-w-md mx-auto">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-2">Capture Assets</h2>
+                <p className="text-muted mb-6">
+                  Snap photos of your valuables.<br />
+                  AI handles identification & valuation.
+                </p>
+              </div>
+
+              {/* Main Upload Area */}
+              <div 
+                onClick={() => router.push('/upload')}
+                className="bg-surface border border-dashed border-border rounded-3xl p-8 text-center cursor-pointer hover:border-accent hover:bg-surface-hover transition-all active:scale-[0.99]"
+              >
+                <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Camera className="w-8 h-8 text-accent-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Tap to capture or upload</h3>
+                <p className="text-muted text-sm">
+                  Photos, receipts, or documentation<br />
+                  Up to 10MB • JPG, PNG, PDF
+                </p>
+              </div>
+
+              {/* Features */}
+              <div className="bg-surface border border-border/10 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
+                    <span className="text-accent-foreground text-sm font-bold">AI</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-accent">AI-Powered Processing</h3>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                    <span className="text-foreground text-sm">Instant classification & categorization</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                    <span className="text-foreground text-sm">Market-based value estimation</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                    <span className="text-foreground text-sm">Serial number & model detection</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                    <span className="text-foreground text-sm">Coverage gap analysis</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tips */}
+              <div className="bg-surface border border-border/10 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-white text-xs">💡</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-foreground mb-2">Best results with clear, well-lit photos showing full item detail</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-3 py-1 bg-background rounded-full text-xs text-accent">Electronics</span>
+                      <span className="px-3 py-1 bg-background rounded-full text-xs text-accent">Jewelry</span>
+                      <span className="px-3 py-1 bg-background rounded-full text-xs text-accent">Art & Collectibles</span>
+                      <span className="px-3 py-1 bg-background rounded-full text-xs text-accent">Appliances</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <button 
+                onClick={() => router.push('/upload')}
+                className="w-full h-14 text-lg font-bold bg-accent text-accent-foreground rounded-2xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]"
+              >
+                <Camera className="w-5 h-5" />
+                Start Camera
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'inventory' && (
+            <div className="text-center py-12 max-w-md mx-auto">
+              <List className="w-16 h-16 text-muted mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Your Inventory</h3>
+              <p className="text-muted mb-6">Add some assets to see them here</p>
+              <button 
+                onClick={() => {
+                  setActiveTab('upload');
+                  router.push('/upload');
+                }}
+                className="px-6 py-3 bg-accent text-accent-foreground rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] mx-auto"
+              >
+                <Camera className="w-5 h-5" />
+                Upload Your First Asset
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'policy' && (
+            <div className="text-center py-12 max-w-md mx-auto">
+              <FileText className="w-16 h-16 text-muted mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Policy Analysis</h3>
+              <p className="text-muted mb-6">Upload your insurance policy to find coverage gaps</p>
+              <button 
+                onClick={() => router.push('/policy')}
+                className="px-6 py-3 bg-accent text-accent-foreground rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] mx-auto"
+              >
+                <FileText className="w-5 h-5" />
+                Upload Policy
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
