@@ -39,3 +39,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+vaultify-demo-firebase-adminsdk-fbsvc-eccdece0e5.json
