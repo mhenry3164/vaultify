@@ -40,4 +40,22 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Firebase credentials and service account keys
+*firebase-adminsdk*.json
+*serviceAccountKey*.json
+*service-account*.json
 vaultify-demo-firebase-adminsdk-fbsvc-eccdece0e5.json
+
+# Other sensitive files
+*.key
+*.p12
+*.pfx
+*.pem
+*.crt
+*.cer
+*.der
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
