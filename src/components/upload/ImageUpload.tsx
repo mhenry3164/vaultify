@@ -157,7 +157,7 @@ export function ImageUpload({
               variant="outline"
               onClick={(e) => {
                 e.stopPropagation();
-                document.querySelector('input[type="file"]')?.click();
+                (document.querySelector('input[type="file"]') as HTMLInputElement)?.click();
               }}
             >
               <Camera className="w-4 h-4 mr-2" />
@@ -168,7 +168,7 @@ export function ImageUpload({
               variant="outline"
               onClick={(e) => {
                 e.stopPropagation();
-                document.querySelector('input[type="file"]')?.click();
+                (document.querySelector('input[type="file"]') as HTMLInputElement)?.click();
               }}
             >
               <Upload className="w-4 h-4 mr-2" />

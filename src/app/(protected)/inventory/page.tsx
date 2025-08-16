@@ -290,7 +290,7 @@ export default function InventoryPage() {
                   <label className="block text-sm font-medium text-elegant-300 mb-2">Category</label>
                   <select
                     value={editForm.category || ''}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value as Asset['category'] }))}
                     className="w-full h-12 bg-elegant-800/50 border border-elegant-600 rounded-xl px-4 text-white focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/20"
                   >
                     {categories.filter(cat => cat.value !== 'all').map(category => (

@@ -14,6 +14,7 @@ interface FileMetadata {
   name: string;
   size: number;
   type: string;
+  dataUrl: string;
 }
 
 interface AnalysisResult {

@@ -13,6 +13,7 @@ interface FileMetadata {
   name: string;
   size: number;
   type: string;
+  dataUrl: string;
 }
 
 interface ProcessingStep {
@@ -317,7 +318,7 @@ export default function ProcessingPage() {
                   </div>
                   <h4 className="text-green-400 font-medium mb-1">Batch Complete!</h4>
                   <p className="text-green-300 text-sm">
-                    {results.filter(r => r.success && r.assetId).length} items saved to inventory
+                    {results.filter(r => r.assetId && !r.error).length} items saved to inventory
                   </p>
                 </div>
               )}
