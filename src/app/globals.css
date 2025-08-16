@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 8, 8, 8;
+  --background-end-rgb: 15, 15, 15;
+  --gold-rgb: 251, 191, 36;
+  --gold-light-rgb: 252, 211, 77;
+  --dark-rgb: 17, 17, 17;
+  --dark-card-rgb: 23, 23, 23;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      135deg,
+      rgb(var(--background-start-rgb)),
+      rgb(var(--background-end-rgb))
+    );
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+input[type="file"] {
+  display: none;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--dark-rgb));
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--gold-rgb));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--gold-light-rgb));
+}
+
+/* Elegant input focus styles */
+.elegant-focus:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(251, 191, 36);
+  border-color: rgb(251, 191, 36);
+}
