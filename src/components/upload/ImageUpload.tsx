@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Camera, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -24,6 +24,8 @@ export function ImageUpload({
   className 
 }: ImageUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<ProcessedFile[]>([]);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cleanup preview URLs on unmount to prevent memory leaks  
   useEffect(() => {
@@ -104,13 +106,34 @@ export function ImageUpload({
     return canvas.toDataURL('image/png');
   };
 
+  // Handle camera input change
+  const handleCameraChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 0) {
+      onDrop(files);
+    }
+    // Reset input so same file can be selected again
+    event.target.value = '';
+  };
+
+  // Handle file input change
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 0) {
+      onDrop(files);
+    }
+    // Reset input so same file can be selected again
+    event.target.value = '';
+  };
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.heic', '.heif']
     },
     maxFiles: maxFiles - selectedFiles.length,
-    maxSize: 10 * 1024 * 1024, // 10MB
+    maxSize: 10 * 1024 * 1024, // 10MB,
+    noClick: true, // Disable click on dropzone to use our custom buttons
   });
 
   const removeFile = (index: number) => {
@@ -130,11 +153,32 @@ export function ImageUpload({
       <div
         {...getRootProps()}
         className={cn(
-          'border-2 border-dashed border-elegant-600 rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 hover:border-gold-400 hover:bg-elegant-800/30 hover:shadow-gold-glow/20 backdrop-blur-sm',
+          'border-2 border-dashed border-elegant-600 rounded-2xl p-8 text-center transition-all duration-300 hover:border-gold-400/50 hover:bg-gold-400/5 hover:shadow-gold-glow/20',
           isDragActive && 'border-gold-400 bg-gold-400/10 shadow-gold-glow/30'
         )}
       >
         <input {...getInputProps()} />
+        
+        {/* Hidden camera input for mobile camera access */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          multiple={maxFiles > 1}
+          onChange={handleCameraChange}
+          className="hidden"
+        />
+        
+        {/* Hidden file input for file browsing */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,.heic,.heif"
+          multiple={maxFiles > 1}
+          onChange={handleFileChange}
+          className="hidden"
+        />
         
         <div className="space-y-4">
           <div className="w-20 h-20 mx-auto bg-gradient-gold rounded-full flex items-center justify-center shadow-gold-glow/50 animate-pulse">
@@ -157,8 +201,9 @@ export function ImageUpload({
               variant="outline"
               onClick={(e) => {
                 e.stopPropagation();
-                (document.querySelector('input[type="file"]') as HTMLInputElement)?.click();
+                cameraInputRef.current?.click();
               }}
+              disabled={selectedFiles.length >= maxFiles}
             >
               <Camera className="w-4 h-4 mr-2" />
               Take Photo
@@ -168,8 +213,9 @@ export function ImageUpload({
               variant="outline"
               onClick={(e) => {
                 e.stopPropagation();
-                (document.querySelector('input[type="file"]') as HTMLInputElement)?.click();
+                fileInputRef.current?.click();
               }}
+              disabled={selectedFiles.length >= maxFiles}
             >
               <Upload className="w-4 h-4 mr-2" />
               Browse Files
