@@ -12,6 +12,7 @@ import { ArrowLeft, Plus, Search, Filter, X, Save, Images, ChevronLeft, ChevronR
 import { formatCurrency } from '@/lib/utils';
 import { CATEGORY_OPTIONS } from '@/lib/categories';
 import Link from 'next/link';
+import Image from 'next/image';
 import { BackgroundProcessingIndicator } from '@/components/upload/BackgroundProcessingIndicator';
 
 export default function InventoryPage() {
@@ -36,16 +37,6 @@ export default function InventoryPage() {
     { value: 'all', label: 'All Categories' },
     ...CATEGORY_OPTIONS,
   ];
-
-  useEffect(() => {
-    if (user) {
-      loadAssets();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    filterAssets();
-  }, [assets, searchTerm, selectedCategory]);
 
   const loadAssets = async () => {
     if (!user) return;
@@ -79,6 +70,16 @@ export default function InventoryPage() {
 
     setFilteredAssets(filtered);
   };
+
+  useEffect(() => {
+    if (user) {
+      loadAssets();
+    }
+  }, [user, loadAssets]);
+
+  useEffect(() => {
+    filterAssets();
+  }, [assets, searchTerm, selectedCategory, filterAssets]);
 
   const handleEdit = (asset: Asset) => {
     console.log('Edit asset:', asset);
@@ -417,10 +418,11 @@ export default function InventoryPage() {
                     <div className="relative">
                       {/* Main image display */}
                       <div className="relative aspect-video bg-elegant-800 rounded-lg overflow-hidden">
-                        <img
+                        <Image
                           src={allImages[currentImageIndex]}
                           alt={`${editingAsset.name} - Image ${currentImageIndex + 1}`}
-                          className="w-full h-full object-contain"
+                          fill
+                          className="object-contain"
                         />
                         
                         {/* Navigation for multiple images */}
@@ -460,10 +462,11 @@ export default function InventoryPage() {
                                   : 'border-elegant-600 hover:border-elegant-500'
                               }`}
                             >
-                              <img
+                              <Image
                                 src={imageUrl}
                                 alt={`Thumbnail ${index + 1}`}
-                                className="w-full h-full object-cover"
+                                fill
+                                className="object-cover"
                               />
                             </button>
                           ))}
@@ -508,7 +511,7 @@ export default function InventoryPage() {
                         Add & Analyze New Images
                       </h4>
                       <p className="text-xs text-elegant-400 mb-4">
-                        Upload additional images (ID cards, receipts, better angles) to enhance this asset's information.
+                        Upload additional images (ID cards, receipts, better angles) to enhance this asset&apos;s information.
                       </p>
                       
                       {/* Image Upload Area */}
@@ -599,14 +602,11 @@ export default function InventoryPage() {
                               {newImages.map((file, index) => (
                                 <div key={index} className="relative group">
                                   <div className="aspect-square bg-elegant-800 rounded-xl overflow-hidden border border-elegant-700 hover:border-gold-400/50 transition-all duration-200 shadow-elegant">
-                                    <img
+                                    <Image
                                       src={createImagePreview(file)}
                                       alt={`New image ${index + 1}`}
-                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMzc0MTUxIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5Q0EzQUYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkltYWdlPC90ZXh0Pgo8L3N2Zz4K';
-                                      }}
+                                      fill
+                                      className="object-cover group-hover:scale-105 transition-transform duration-200"
                                     />
                                   </div>
                                   <button
@@ -798,7 +798,7 @@ export default function InventoryPage() {
                         📝 Help us understand the value change
                       </label>
                       <p className="text-xs text-elegant-400 mb-2">
-                        A brief note helps with accurate documentation (e.g., "found receipt showing higher value", "condition improved after cleaning", "market research showed different pricing").
+                        A brief note helps with accurate documentation (e.g., &quot;found receipt showing higher value&quot;, &quot;condition improved after cleaning&quot;, &quot;market research showed different pricing&quot;).
                       </p>
                       <textarea
                         value={priceJustification}

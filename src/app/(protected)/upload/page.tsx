@@ -303,7 +303,7 @@ export default function UploadPage() {
                   
                   <div className="p-4 space-y-4">
                     <p className="text-sm text-elegant-400">
-                      Help the AI identify unique items by providing additional context (e.g., "numbered collectible", "vintage 1960s", "custom made").
+                      Help the AI identify unique items by providing additional context (e.g., &quot;numbered collectible&quot;, &quot;vintage 1960s&quot;, &quot;custom made&quot;).
                     </p>
                     
                     <textarea
