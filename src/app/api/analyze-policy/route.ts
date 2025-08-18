@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { CATEGORY_PIPE_STRING } from '@/lib/categories';
 import { getUserAssetsAdmin } from '@/lib/assets-admin';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
@@ -87,7 +88,7 @@ Return your analysis as a JSON object with this exact structure:
   },
   "gapsByCategory": [
     {
-      "category": "electronics|jewelry|furniture|etc",
+      "category": "${CATEGORY_PIPE_STRING}",
       "inventoryValue": number,
       "coveredAmount": number,
       "gap": number,

@@ -5,9 +5,9 @@ import { useAssets } from '@/hooks/useAssets';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { ProcessAnimation } from '@/components/dashboard/ProcessAnimation';
-import { Shield } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -33,11 +33,17 @@ export default function Dashboard() {
         <div className="max-w-md mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-gold rounded-lg flex items-center justify-center shadow-gold-glow/50">
-                <Shield className="w-5 h-5 text-black" />
+              <div className="w-8 h-8 bg-gradient-gold rounded-lg flex items-center justify-center shadow-gold-glow/50 p-1">
+                <Image 
+                  src="/logo/vaultify_full_shield.svg" 
+                  alt="Vaultify Shield" 
+                  width={24} 
+                  height={24}
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">Snap My Assets</h1>
+                <h1 className="text-xl font-bold text-white">Asset Snap</h1>
                 <p className="text-xs text-gray-400">by Vaultify</p>
               </div>
             </div>

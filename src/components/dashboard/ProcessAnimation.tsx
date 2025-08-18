@@ -136,7 +136,7 @@ export function ProcessAnimation({ showStaticCards = false }: ProcessAnimationPr
       {/* Process indicator */}
       <div className="flex items-center justify-center mb-3">
         <Sparkles className="w-3 h-3 text-gold-400 mr-1 animate-spin-slow" />
-        <p className="text-elegant-400 text-xs font-medium">How Snap My Assets Works</p>
+        <p className="text-elegant-400 text-xs font-medium">How Asset Snap Works</p>
         <Sparkles className="w-3 h-3 text-gold-400 ml-1 animate-spin-slow" />
       </div>
 

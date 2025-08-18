@@ -1,19 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { ImageUpload } from '@/components/upload/ImageUpload';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { saveAsset, uploadAssetImage, updateAsset } from '@/lib/assets';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react';
 import Link from 'next/link';
 
 export default function UploadPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const router = useRouter();
+  const [userComment, setUserComment] = useState<string>('');
+  const [showCommentDialog, setShowCommentDialog] = useState(false);
+  const [resetTrigger, setResetTrigger] = useState(0);
+  const [isMultiImageMode, setIsMultiImageMode] = useState(false);
   const { user } = useAuth();
 
   const handleImagesSelected = (files: File[]) => {
@@ -23,21 +24,22 @@ export default function UploadPage() {
   const handleProcessImages = async () => {
     if (selectedFiles.length === 0) return;
     
-    setIsProcessing(true);
-    
     try {
       // Start background processing immediately
       const processingPromise = startBackgroundProcessing(selectedFiles);
       
-      // Store the processing promise globally so other pages can monitor it
+      // Store the processing promise globally so notification system can monitor it
       (window as any).currentProcessing = processingPromise;
       
-      // Navigate to processing page to show progress
-      router.push('/upload/processing');
+      // Clear selected files and reset ImageUpload component to blank slate
+      setSelectedFiles([]);
+      setResetTrigger(prev => prev + 1); // This will trigger ImageUpload to clear thumbnails
+      
+      // Keep user on upload page - processing continues in background
+      // The BackgroundProcessingIndicator will show progress
       
     } catch (error) {
       console.error('Failed to start processing:', error);
-      setIsProcessing(false);
     }
   };
   
@@ -47,19 +49,47 @@ export default function UploadPage() {
     
     const results = [];
     
+    // Immediately notify the total count to prevent "0 of 0" display
+    if ((window as any).onGlobalProcessingUpdate) {
+      (window as any).onGlobalProcessingUpdate(0, files.length);
+    }
+    
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       
       try {
-        // Analyze with AI
-        const response = await fetch('/api/analyze-image', {
-          method: 'POST',
-          body: (() => {
-            const formData = new FormData();
-            formData.append('image', file);
-            return formData;
-          })()
-        });
+        let response;
+        
+        if (isMultiImageMode && i === 0) {
+          // Multi-image mode: process all files together in first iteration
+          const formData = new FormData();
+          files.forEach((f, index) => {
+            formData.append(`image${index}`, f);
+          });
+          if (userComment.trim()) {
+            formData.append('comment', userComment.trim());
+          }
+          
+          response = await fetch('/api/analyze-multi-image', {
+            method: 'POST',
+            body: formData
+          });
+        } else if (isMultiImageMode && i > 0) {
+          // Skip subsequent iterations in multi-image mode
+          continue;
+        } else {
+          // Single image mode: analyze each image separately
+          const formData = new FormData();
+          formData.append('image', file);
+          if (userComment.trim()) {
+            formData.append('comment', userComment.trim());
+          }
+          
+          response = await fetch('/api/analyze-image', {
+            method: 'POST',
+            body: formData
+          });
+        }
         
         if (!response.ok) {
           throw new Error(`Analysis failed: ${response.statusText}`);
@@ -80,33 +110,68 @@ export default function UploadPage() {
           confidence: analysis.confidence || 0.5,
           room: analysis.room,
           imageUrl: '',
+          // Add purchase info if available from multi-image analysis
+          ...(analysis.purchaseInfo && {
+            purchaseInfo: analysis.purchaseInfo
+          })
         });
         
-        // Upload image
-        let imageUrl;
+        // Upload images (all images for multi-image mode, single image for single mode)
+        const imagesToUpload = isMultiImageMode ? files : [file];
+        const imageUrls: string[] = [];
+        
         if (assetId) {
-          imageUrl = await uploadAssetImage(user.uid, assetId, file);
-          if (imageUrl) {
-            await updateAsset(user.uid, assetId, { imageUrl });
+          for (const imageFile of imagesToUpload) {
+            const imageUrl = await uploadAssetImage(user.uid, assetId, imageFile);
+            if (imageUrl) {
+              imageUrls.push(imageUrl);
+            }
+          }
+          
+          // Update asset with primary image URL (first image)
+          if (imageUrls.length > 0) {
+            await updateAsset(user.uid, assetId, { 
+              imageUrl: imageUrls[0],
+              ...(imageUrls.length > 1 && { additionalImages: imageUrls.slice(1) })
+            });
           }
         }
         
-        results.push({
-          file: { name: file.name, size: file.size, type: file.type },
-          analysis,
-          assetId,
-          imageUrl,
-          success: true
-        });
+        // In multi-image mode, create result for all files but with same analysis
+        if (isMultiImageMode) {
+          files.forEach((f, idx) => {
+            results.push({
+              file: { name: f.name, size: f.size, type: f.type },
+              analysis,
+              assetId,
+              imageUrl: imageUrls[idx] || imageUrls[0],
+              success: true,
+              isMultiImage: true,
+              isPrimary: idx === 0
+            });
+          });
+          // Break out of the loop since we processed all files
+          break;
+        } else {
+          results.push({
+            file: { name: file.name, size: file.size, type: file.type },
+            analysis,
+            assetId,
+            imageUrl: imageUrls[0],
+            success: true
+          });
+        }
         
         // Notify progress (if processing page is listening)
         if ((window as any).onProcessingProgress) {
-          (window as any).onProcessingProgress(i + 1, files.length, results);
+          const progressCount = isMultiImageMode ? files.length : i + 1;
+          (window as any).onProcessingProgress(progressCount, files.length, results);
         }
         
         // Notify global progress indicator
         if ((window as any).onGlobalProcessingUpdate) {
-          (window as any).onGlobalProcessingUpdate(i + 1, files.length);
+          const progressCount = isMultiImageMode ? files.length : i + 1;
+          (window as any).onGlobalProcessingUpdate(progressCount, files.length);
         }
         
       } catch (error) {
@@ -163,7 +228,120 @@ export default function UploadPage() {
             <ImageUpload
               onImagesSelected={handleImagesSelected}
               maxFiles={5}
+              resetTrigger={resetTrigger}
             />
+
+            {/* User Comment Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-elegant-300 font-medium">
+                  Add context for unique items
+                </label>
+                <button
+                  onClick={() => setShowCommentDialog(true)}
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-primary-500 hover:bg-primary-600 transition-colors duration-200"
+                  type="button"
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                </button>
+              </div>
+              
+              {userComment && (
+                <div className="bg-elegant-800/50 rounded-lg p-3 border border-elegant-700/50">
+                  <p className="text-sm text-elegant-300 mb-2">Your comment:</p>
+                  <p className="text-sm text-white">{userComment}</p>
+                  <button
+                    onClick={() => setUserComment('')}
+                    className="text-xs text-elegant-400 hover:text-white mt-2 underline"
+                    type="button"
+                  >
+                    Clear comment
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Multi-Image Toggle */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-elegant-800/30 rounded-lg border border-elegant-700/50">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-medium text-white">Multi-Image Single Item</h3>
+                  <p className="text-xs text-elegant-400">
+                    Upload multiple photos of the same item (different angles + receipt/invoice)
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsMultiImageMode(!isMultiImageMode)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-elegant-900 ${
+                    isMultiImageMode ? 'bg-primary-500' : 'bg-elegant-600'
+                  }`}
+                  type="button"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isMultiImageMode ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Comment Dialog */}
+            {showCommentDialog && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-elegant-900 rounded-lg border border-elegant-700/50 w-full max-w-md">
+                  <div className="flex items-center justify-between p-4 border-b border-elegant-700/50">
+                    <h3 className="text-lg font-semibold text-white">Add Item Context</h3>
+                    <button
+                      onClick={() => setShowCommentDialog(false)}
+                      className="text-elegant-400 hover:text-white transition-colors"
+                      type="button"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-4 space-y-4">
+                    <p className="text-sm text-elegant-400">
+                      Help the AI identify unique items by providing additional context (e.g., "numbered collectible", "vintage 1960s", "custom made").
+                    </p>
+                    
+                    <textarea
+                      value={userComment}
+                      onChange={(e) => setUserComment(e.target.value)}
+                      placeholder="Describe what makes this item unique or special..."
+                      className="w-full h-24 px-3 py-2 bg-elegant-800 border border-elegant-700 rounded-lg text-white placeholder-elegant-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                      maxLength={200}
+                    />
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-elegant-500">
+                        {userComment.length}/200 characters
+                      </span>
+                      
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={() => {
+                            setUserComment('');
+                            setShowCommentDialog(false);
+                          }}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={() => setShowCommentDialog(false)}
+                          size="sm"
+                        >
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {selectedFiles.length > 0 && (
               <div className="space-y-4">
@@ -175,17 +353,16 @@ export default function UploadPage() {
                 
                 <Button
                   onClick={handleProcessImages}
-                  disabled={isProcessing}
+                  disabled={selectedFiles.length === 0}
                   className="w-full"
                 >
-                  {isProcessing ? (
-                    'Processing...'
-                  ) : (
-                    <>
-                      Process Images
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
+                  <>
+                    {isMultiImageMode 
+                      ? `Analyze as Single Item (${selectedFiles.length} images)` 
+                      : 'Add to Processing Queue'
+                    }
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
                 </Button>
               </div>
             )}

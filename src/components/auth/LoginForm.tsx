@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Shield } from 'lucide-react';
+import Image from 'next/image';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -38,11 +38,16 @@ export function LoginForm() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center p-6">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-2xl flex items-center justify-center">
-            <Shield className="w-8 h-8 text-black" />
+          <div className="mb-6">
+            <Image 
+              src="/logo/vaultify_logo_full.svg" 
+              alt="Vaultify Logo" 
+              width={200} 
+              height={60}
+              className="mx-auto"
+              priority
+            />
           </div>
-          <CardTitle className="text-2xl">Snap My Assets</CardTitle>
-          <p className="text-gray-400">by Vaultify</p>
         </CardHeader>
         
         <CardContent>

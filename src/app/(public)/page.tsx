@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { Shield, Camera, AlertTriangle, Users } from 'lucide-react'
+import { Camera, AlertTriangle, Users } from 'lucide-react'
+import Image from 'next/image'
 
 export default function LandingPage() {
   return (
@@ -8,11 +9,17 @@ export default function LandingPage() {
       <header className="px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-lg flex items-center justify-center">
-              <Shield className="w-6 h-6 text-black" />
+            <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-lg flex items-center justify-center p-1">
+              <Image 
+                src="/logo/vaultify_full_shield.svg" 
+                alt="Vaultify Shield" 
+                width={32} 
+                height={32}
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Snap My Assets</h1>
+              <h1 className="text-xl font-bold text-white">Asset Snap</h1>
               <p className="text-xs text-gray-400">by Vaultify</p>
             </div>
           </div>
@@ -29,6 +36,18 @@ export default function LandingPage() {
       {/* Hero Section */}
       <main className="px-6 py-12">
         <div className="max-w-6xl mx-auto text-center">
+          {/* Full Logo */}
+          <div className="mb-8">
+            <Image 
+              src="/logo/vaultify_logo_full.svg" 
+              alt="Vaultify Full Logo" 
+              width={300} 
+              height={80}
+              className="mx-auto"
+              priority
+            />
+          </div>
+          
           <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
             Cover Your Assets.<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-300">

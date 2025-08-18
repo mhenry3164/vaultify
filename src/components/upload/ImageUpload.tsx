@@ -11,6 +11,7 @@ interface ImageUploadProps {
   onImagesSelected: (files: File[]) => void;
   maxFiles?: number;
   className?: string;
+  resetTrigger?: number; // When this changes, component will reset
 }
 
 interface ProcessedFile {
@@ -21,11 +22,25 @@ interface ProcessedFile {
 export function ImageUpload({ 
   onImagesSelected, 
   maxFiles = 5, 
-  className 
+  className,
+  resetTrigger = 0
 }: ImageUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<ProcessedFile[]>([]);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset component when resetTrigger changes
+  useEffect(() => {
+    if (resetTrigger > 0) {
+      // Clean up existing preview URLs before clearing
+      selectedFiles.forEach(fileItem => {
+        if (fileItem.previewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(fileItem.previewUrl);
+        }
+      });
+      setSelectedFiles([]);
+    }
+  }, [resetTrigger]);
 
   // Cleanup preview URLs on unmount to prevent memory leaks  
   useEffect(() => {

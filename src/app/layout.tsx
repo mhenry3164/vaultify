@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Snap My Assets by Vaultify',
+  title: 'Asset Snap by Vaultify',
   description: 'AI-powered household inventory and insurance gap analysis',
 }
 

@@ -22,19 +22,4 @@ export function formatDate(date: Date) {
   }).format(date);
 }
 
-export function getCategoryIcon(category: string) {
-  const icons: Record<string, string> = {
-    electronics: '📱',
-    jewelry: '💎',
-    furniture: '🪑',
-    appliances: '🏠',
-    clothing: '👕',
-    art: '🖼️',
-    books: '📚',
-    tools: '🔧',
-    sports: '⚽',
-    other: '📦',
-  };
-  
-  return icons[category] || icons.other;
-}
+export { getCategoryIcon } from './categories';

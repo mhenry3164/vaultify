@@ -1,8 +1,10 @@
+import { AssetCategory } from '@/lib/categories';
+
 export interface Asset {
   id: string;
   userId: string;
   name: string;
-  category: 'electronics' | 'jewelry' | 'furniture' | 'appliances' | 'clothing' | 'art' | 'books' | 'tools' | 'sports' | 'other';
+  category: AssetCategory;
   brand?: string;
   model?: string;
   serial?: string;
@@ -15,6 +17,18 @@ export interface Asset {
   confidence: number;
   room?: string;
   imageUrl?: string;
+  // Multi-image support
+  additionalImages?: string[];
+  // Purchase information from receipts/invoices
+  purchaseInfo?: {
+    retailer?: string;
+    purchaseDate?: string;
+    originalPrice?: number;
+  };
+  // Price justification fields for audit trail
+  priceJustification?: string;
+  priceChangeDate?: Date;
+  originalPrice?: number;
   createdAt: Date;
   updatedAt: Date;
 }

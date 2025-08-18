@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { CATEGORY_PIPE_STRING } from '@/lib/categories';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
@@ -7,12 +8,15 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const image = formData.get('image') as File;
+    const userComment = formData.get('comment') as string | null;
     
     console.log('Received image analysis request:', {
       hasImage: !!image,
       imageName: image?.name,
       imageType: image?.type,
-      imageSize: image?.size
+      imageSize: image?.size,
+      hasComment: !!userComment,
+      commentLength: userComment?.length || 0
     });
     
     if (!image) {
@@ -38,14 +42,14 @@ export async function POST(request: NextRequest) {
     const base64 = Buffer.from(bytes).toString('base64');
 
     // Initialize Gemini Pro Vision
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
     Analyze this image of a household item and extract the following information in JSON format:
     
     {
       "name": "specific item name",
-      "category": "electronics|jewelry|furniture|appliances|clothing|art|books|tools|sports|other",
+      "category": "${CATEGORY_PIPE_STRING}",
       "brand": "brand name if visible",
       "model": "model number if visible", 
       "serial": "serial number if visible",
@@ -58,7 +62,11 @@ export async function POST(request: NextRequest) {
       "confidence": number between 0-1,
       "room": "likely room location (living room, bedroom, kitchen, etc.)"
     }
-    
+    ${userComment ? `
+    IMPORTANT: The user has provided additional context about this item: "${userComment}"
+    Use this information to improve your analysis accuracy, especially for unique, rare, or collectible items.
+    Consider this context when determining the name, category, estimated value, and description.
+    ` : ''}
     Be as accurate as possible. If information is not clearly visible, use null for that field.
     For estimated value, provide a single realistic replacement cost based on the item's apparent condition and type.
     Choose the most likely replacement value with highest confidence rather than a range.

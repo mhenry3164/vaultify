@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { saveAsset, uploadAssetImage, updateAsset } from '@/lib/assets';
 import { ArrowLeft, ArrowRight, Check, X, Edit2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { CATEGORY_OPTIONS } from '@/lib/categories';
 
 interface FileMetadata {
   name: string;
@@ -265,16 +266,9 @@ export default function ReviewPage() {
                           onChange={(e) => setEditedData((prev: any) => ({ ...prev, category: e.target.value }))}
                           className="w-full h-12 bg-gray-800 border border-gray-600 rounded-xl px-4 text-white"
                         >
-                          <option value="electronics">Electronics</option>
-                          <option value="jewelry">Jewelry</option>
-                          <option value="furniture">Furniture</option>
-                          <option value="appliances">Appliances</option>
-                          <option value="clothing">Clothing</option>
-                          <option value="art">Art</option>
-                          <option value="books">Books</option>
-                          <option value="tools">Tools</option>
-                          <option value="sports">Sports</option>
-                          <option value="other">Other</option>
+                          {CATEGORY_OPTIONS.map(({ value, label }) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
                         </select>
                       ) : (
                         <p className="text-white capitalize">{currentData?.category || 'Other'}</p>
