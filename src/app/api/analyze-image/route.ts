@@ -5,10 +5,17 @@ import { CATEGORY_PIPE_STRING } from '@/lib/categories';
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
 export async function POST(request: NextRequest) {
+  let imageName = 'unknown-file';
+  
   try {
     const formData = await request.formData();
     const image = formData.get('image') as File;
     const userComment = formData.get('comment') as string | null;
+    
+    // Store image name for potential use in error handling
+    if (image?.name) {
+      imageName = image.name;
+    }
     
     console.log('Received image analysis request:', {
       hasImage: !!image,
@@ -88,21 +95,50 @@ export async function POST(request: NextRequest) {
     // Parse JSON response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error('Invalid JSON response from AI');
+      console.warn('Invalid JSON response from AI, returning boilerplate data');
+      return NextResponse.json(createBoilerplateAnalysis(imageName));
     }
     
-    const analysis = JSON.parse(jsonMatch[0]);
-    
-    return NextResponse.json(analysis);
+    let analysis;
+    try {
+      analysis = JSON.parse(jsonMatch[0]);
+      
+      // Validate that we have at least basic required fields
+      if (!analysis.name && !analysis.category) {
+        console.warn('AI analysis missing critical fields, returning boilerplate data');
+        return NextResponse.json(createBoilerplateAnalysis(imageName));
+      }
+      
+      return NextResponse.json(analysis);
+    } catch (parseError) {
+      console.warn('Failed to parse AI response JSON, returning boilerplate data:', parseError);
+      return NextResponse.json(createBoilerplateAnalysis(imageName));
+    }
     
   } catch (error) {
-    console.error('Image analysis error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to analyze image',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }, 
-      { status: 500 }
-    );
+    console.error('Image analysis error, returning boilerplate data:', error);
+    return NextResponse.json(createBoilerplateAnalysis(imageName));
   }
+}
+
+// Helper function to create boilerplate analysis for unrecognized images
+function createBoilerplateAnalysis(fileName: string) {
+  return {
+    name: "Unrecognized Item",
+    category: "other",
+    brand: null,
+    model: null,
+    serial: null,
+    condition: "good",
+    estimatedValue: {
+      amount: 0,
+      currency: "USD"
+    },
+    description: "This item could not be automatically identified. Please review and update the details manually. Consider uploading additional images from different angles or with better lighting to help with identification.",
+    confidence: 0.1,
+    room: null,
+    isUnrecognized: true,
+    originalFileName: fileName,
+    userGuidance: "To improve recognition: 1) Upload clearer images with good lighting, 2) Include multiple angles of the item, 3) Ensure the item fills most of the frame, 4) Add context in the comment field for unique items"
+  };
 }
