@@ -9,6 +9,28 @@ import { saveAsset, uploadAssetImage, updateAsset } from '@/lib/assets';
 import { ArrowLeft, ArrowRight, Plus, X } from 'lucide-react';
 import Link from 'next/link';
 
+// Helper function to create fallback analysis when uploads fail
+function createFallbackAnalysis(fileName: string, reason: string) {
+  return {
+    name: "Unrecognized Item",
+    category: "other",
+    brand: null,
+    model: null,
+    serial: null,
+    condition: "good",
+    estimatedValue: {
+      amount: 0,
+      currency: "USD"
+    },
+    description: `This item could not be automatically identified. ${reason} Please review and update the details manually.`,
+    confidence: 0.1,
+    room: null,
+    isUnrecognized: true,
+    originalFileName: fileName,
+    userGuidance: "To improve processing: 1) Try uploading smaller images (under 2MB each), 2) Upload one image at a time, 3) Use clear, well-lit photos, 4) Ensure good image quality"
+  };
+}
+
 export default function UploadPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [userComment, setUserComment] = useState<string>('');
@@ -91,11 +113,25 @@ export default function UploadPage() {
           });
         }
         
-        if (!response.ok) {
-          throw new Error(`Analysis failed: ${response.statusText}`);
-        }
+        let analysis;
         
-        const analysis = await response.json();
+        if (!response.ok) {
+          // Handle 413 (Content Too Large) errors with fallback save
+          if (response.status === 413) {
+            const errorMessage = isMultiImageMode 
+              ? 'Multi-image upload too large - try uploading fewer images at once or compress images before uploading.'
+              : 'Image too large for processing. Please try a smaller image or compress before uploading.';
+            console.warn('Request too large (413), creating fallback asset for:', isMultiImageMode ? `${files.length} images` : file.name);
+            analysis = createFallbackAnalysis(
+              isMultiImageMode ? `Multi-image upload (${files.length} images)` : file.name, 
+              errorMessage
+            );
+          } else {
+            throw new Error(`Analysis failed: ${response.statusText}`);
+          }
+        } else {
+          analysis = await response.json();
+        }
         
         // Save asset immediately
         const assetId = await saveAsset(user.uid, {
