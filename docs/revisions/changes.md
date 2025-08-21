@@ -454,4 +454,147 @@ Upload → Select Images → Add to Queue → Continue Adding More Images (seaml
 ---
 
 
+## Inventory Total Value Filter Fix
 
+**Date**: August 18, 2025
+**Issue**: Fixed inventory page total estimated value calculation to reflect filtered results
+
+### Problem
+When users filtered inventory items by category or search term, the "Total Estimated Value" continued to display the sum of all assets rather than just the filtered items.
+
+### Solution
+Updated the `totalValue` calculation in [/src/app/(protected)/inventory/page.tsx](cci:7://file:///Users/matthewhenry/projects/vaultify/src/app/%28protected%29/inventory/page.tsx:0:0-0:0) to use `filteredAssets` instead of `assets`, ensuring the displayed total reflects only the currently visible/filtered items.
+
+### Impact
+- Users now see accurate financial totals for filtered inventory views
+- Enables category-specific valuations for insurance planning
+- Improves data accuracy for filtered inventory analysis
+
+---
+
+---
+
+## Multi-Image Asset Enhancement System
+
+**Date**: August 18, 2025  
+**Implementation Status**: ✅ COMPLETED  
+**Developer**: Matthew Henry  
+
+### Enhancement Overview
+Implemented a comprehensive multi-image asset enhancement system allowing users to upload multiple images per asset (including receipts and ID cards) and leverage AI to analyze and update asset information seamlessly. The system maintains minimal UI disruption with a smooth mobile app-like experience and integrates a streamlined enhancement workflow using AI-powered analysis and existing notification systems.
+
+### 🚀 Key Features Implemented
+
+1. **Multi-Image Single Asset Upload**
+   - Toggle switch on upload page for "Multi-Image Single Item" mode
+   - Combines item photos + receipts/invoices in single AI analysis
+   - Stores all images under same asset ID with primary/additional image tracking
+
+2. **Asset Enhancement via Edit Modal**
+   - Add new images to existing assets (ID cards, receipts, better angles)
+   - Re-analyze all images (existing + new) with current asset data
+   - AI updates only fields where new images provide better information
+
+3. **Background Processing Integration**
+   - Matches upload page UX with [BackgroundProcessingIndicator](cci:1://file:///Users/matthewhenry/projects/vaultify/src/components/upload/BackgroundProcessingIndicator.tsx:12:0-140:1) component
+   - Auto-hide notifications after 4 seconds
+   - Immediate modal closure with background processing
+
+### ✅ Files Created/Modified
+
+#### New API Routes
+1. **Multi-Image Analysis** ([src/app/api/analyze-multi-image/route.ts](cci:7://file:///Users/matthewhenry/projects/vaultify/src/app/api/analyze-multi-image/route.ts:0:0-0:0)) - **NEW FILE**
+   - Handles multiple images in single Gemini API call
+   - Enhanced prompt for analyzing item photos + receipts together
+   - Returns combined analysis with purchase info from receipts
+
+2. **Asset Enhancement** ([src/app/api/enhance-asset/route.ts](cci:7://file:///Users/matthewhenry/projects/vaultify/src/app/api/enhance-asset/route.ts:0:0-0:0)) - **NEW FILE**
+   - Accepts current asset data + new images for re-analysis
+   - Intelligent merging of existing and new information
+   - Returns enhancement summary explaining what was updated
+
+#### Core System Updates
+3. **Asset Type Definition** ([src/types/asset.ts](cci:7://file:///Users/matthewhenry/projects/vaultify/src/types/asset.ts:0:0-0:0))
+   - Added `additionalImages?: string[]` for multiple image URLs
+   - Added `purchaseInfo` object for receipt/invoice data
+   - Added enhancement metadata fields (`lastEnhanced`, `enhancementSummary`)
+
+4. **Upload Page Enhancement** ([src/app/(protected)/upload/page.tsx](cci:7://file:///Users/matthewhenry/projects/vaultify/src/app/%28protected%29/upload/page.tsx:0:0-0:0))
+   - Added toggle switch for multi-image mode with clear description
+   - Routes to appropriate API based on toggle state
+   - Button text changes to "Analyze as Single Item (X images)"
+   - All images stored together, analyzed together, create single asset
+
+5. **Inventory Page Overhaul** ([src/app/(protected)/inventory/page.tsx](cci:7://file:///Users/matthewhenry/projects/vaultify/src/app/%28protected%29/inventory/page.tsx:0:0-0:0))
+   - Enhanced to display multi-image assets with image carousels
+   - Added purchase info badges and UI indicators
+   - Implemented "Add & Analyze New Images" section in edit modal
+   - Background processing integration with [BackgroundProcessingIndicator](cci:1://file:///Users/matthewhenry/projects/vaultify/src/components/upload/BackgroundProcessingIndicator.tsx:12:0-140:1)
+   - Proper thumbnail generation matching upload page UI/UX
+
+6. **Asset Card Component** ([src/components/inventory/AssetCard.tsx](cci:7://file:///Users/matthewhenry/projects/vaultify/src/components/inventory/AssetCard.tsx:0:0-0:0))
+   - Multi-image carousel with navigation controls
+   - Purchase info display from receipt analysis
+   - Enhanced visual indicators for multi-image assets
+
+### 🎯 User Experience Flow
+
+#### Multi-Image Upload Flow
+ - Upload Page → Toggle "Multi-Image Single Item" → Select Images → "Analyze as Single Item (3 images)" → Background Processing → Single Asset Created with All Images
+
+#### Asset Enhancement Flow
+ - Inventory Page → Select Asset → "Add & Analyze New Images" → Select Images → "Analyze as Single Item (3 images)" → Background Processing → Asset Updated with New Images
+
+
+### 🔧 Technical Implementation
+
+**AI Integration:**
+- Gemini 2.5-flash multimodal capabilities for multiple image analysis
+- Enhanced prompting to combine item photos with receipt/invoice data
+- Intelligent field updating preserving high-confidence existing data
+
+**Storage Architecture:**
+- Images stored by user ID and asset ID: `users/${userId}/assets/images/${assetId}-${timestamp}`
+- Primary image in `imageUrl`, additional images in `additionalImages` array
+- Backward compatible with existing single-image workflows
+
+**Background Processing:**
+- Global promise system using `window.currentProcessing`
+- [BackgroundProcessingIndicator](cci:1://file:///Users/matthewhenry/projects/vaultify/src/components/upload/BackgroundProcessingIndicator.tsx:12:0-140:1) component for consistent notifications
+- 4-second auto-hide matching upload page behavior
+
+**UI/UX Consistency:**
+- Gold theme and mobile app-like feel throughout
+- Proper thumbnail generation with `URL.createObjectURL()`
+- HEIC file support and indicators
+- Hover effects and smooth transitions
+
+### 📊 Implementation Results
+
+- **Enhanced Asset Documentation**: Users can now include receipts, ID cards, and multiple angles
+- **Improved AI Accuracy**: Multiple images provide better context for analysis
+- **Seamless UX**: Consistent background processing across upload and enhancement flows
+- **Better Purchase Tracking**: Receipt analysis automatically extracts purchase info
+- **Mobile App Feel**: Smooth, non-blocking workflows with clean notifications
+
+### 💡 Use Cases Perfectly Handled
+
+- **Item + Receipt Upload**: Camera photo of item + receipt photo analyzed together
+- **Serial Number Enhancement**: Adding ID card/label photos to existing assets
+- **Condition Documentation**: Multiple angle photos showing wear/damage
+- **Purchase Info Updates**: Receipt photos to update pricing and purchase details
+- **Insurance Documentation**: Comprehensive image sets for claims
+
+### 🔄 Technical Features
+
+- **Intelligent Enhancement**: Only updates fields where new images provide better info
+- **Comprehensive Analysis**: Combines existing + new images for complete context
+- **Enhancement Tracking**: Metadata tracks when and what was enhanced
+- **Error Handling**: Robust error handling with user-friendly feedback
+- **Performance Optimized**: Efficient image handling and API calls
+
+---
+
+**Enhancement Note**: This implementation transforms Vaultify from a single-image-per-asset system to a comprehensive multi-image documentation platform while maintaining the smooth, mobile app-like experience. The background processing integration ensures consistent UX patterns across all upload and enhancement workflows.
+
+---
