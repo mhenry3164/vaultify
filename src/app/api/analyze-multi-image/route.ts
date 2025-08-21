@@ -5,6 +5,8 @@ import { CATEGORY_PIPE_STRING } from '@/lib/categories';
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
 export async function POST(request: NextRequest) {
+  let imageNames: string[] = [];
+  
   try {
     const formData = await request.formData();
     const userComment = formData.get('comment') as string | null;
@@ -14,6 +16,7 @@ export async function POST(request: NextRequest) {
     for (const [key, value] of formData.entries()) {
       if (key.startsWith('image') && value instanceof File) {
         images.push(value);
+        imageNames.push(value.name);
       }
     }
     
@@ -121,26 +124,58 @@ export async function POST(request: NextRequest) {
     // Parse JSON response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      throw new Error('Invalid JSON response from AI');
+      console.warn('Invalid JSON response from AI, returning boilerplate data for multi-image');
+      return NextResponse.json(createMultiImageBoilerplateAnalysis(imageNames));
     }
     
-    const analysis = JSON.parse(jsonMatch[0]);
-    
-    // Add metadata about the multi-image analysis
-    analysis.multiImage = true;
-    analysis.imageCount = images.length;
-    analysis.imageNames = images.map(img => img.name);
-    
-    return NextResponse.json(analysis);
+    let analysis;
+    try {
+      analysis = JSON.parse(jsonMatch[0]);
+      
+      // Validate that we have at least basic required fields
+      if (!analysis.name && !analysis.category) {
+        console.warn('AI analysis missing critical fields, returning boilerplate data for multi-image');
+        return NextResponse.json(createMultiImageBoilerplateAnalysis(imageNames));
+      }
+      
+      // Add metadata about the multi-image analysis
+      analysis.multiImage = true;
+      analysis.imageCount = images.length;
+      analysis.imageNames = images.map(img => img.name);
+      
+      return NextResponse.json(analysis);
+    } catch (parseError) {
+      console.warn('Failed to parse AI response JSON, returning boilerplate data for multi-image:', parseError);
+      return NextResponse.json(createMultiImageBoilerplateAnalysis(imageNames));
+    }
     
   } catch (error) {
-    console.error('Multi-image analysis error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to analyze images',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }, 
-      { status: 500 }
-    );
+    console.error('Multi-image analysis error, returning boilerplate data:', error);
+    return NextResponse.json(createMultiImageBoilerplateAnalysis(imageNames));
   }
+}
+
+// Helper function to create boilerplate analysis for unrecognized multi-image uploads
+function createMultiImageBoilerplateAnalysis(fileNames: string[]) {
+  return {
+    name: "Unrecognized Item",
+    category: "other",
+    brand: null,
+    model: null,
+    serial: null,
+    condition: "good",
+    estimatedValue: {
+      amount: 0,
+      currency: "USD"
+    },
+    description: "This item could not be automatically identified from the uploaded images. This may be due to image size limits or processing constraints. Please review and update the details manually. Consider uploading smaller or fewer images at once for better processing.",
+    confidence: 0.1,
+    room: null,
+    isUnrecognized: true,
+    multiImage: true,
+    imageCount: fileNames.length,
+    imageNames: fileNames,
+    originalFileNames: fileNames,
+    userGuidance: "For better recognition with multiple images: 1) Try uploading fewer images at once, 2) Ensure images are under 2MB each, 3) Use clear, well-lit photos, 4) Include the most important angles first"
+  };
 }

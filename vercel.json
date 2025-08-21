@@ -1,3 +1,11 @@
 {
-  "regions": ["iad1"]
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/analyze-image/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/analyze-multi-image/route.ts": {
+      "maxDuration": 60
+    }
+  }
 }
