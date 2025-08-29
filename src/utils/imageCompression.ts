@@ -22,9 +22,25 @@ const DEFAULT_OPTIONS: CompressionOptions = {
  */
 export async function compressImageIfNeeded(
   file: File, 
-  options: Partial<CompressionOptions> = {}
+  options: Partial<CompressionOptions> = {},
+  isMultiImage: boolean = false,
+  totalImages: number = 1
 ): Promise<File> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
+  
+  // For multi-image uploads, use much smaller per-image limits
+  if (isMultiImage && totalImages > 1) {
+    // Distribute the total allowed size among all images, with extra compression
+    const perImageLimit = Math.min(
+      opts.maxSizeBytes / totalImages * 0.6, // Use 60% of the average allowance
+      1.5 * 1024 * 1024 // Cap at 1.5MB per image for multi-image uploads
+    );
+    opts.maxSizeBytes = perImageLimit;
+    opts.quality = Math.min(opts.quality, 0.75); // More aggressive quality reduction
+    opts.maxWidth = Math.min(opts.maxWidth, 1600); // Smaller dimensions
+    opts.maxHeight = Math.min(opts.maxHeight, 1600);
+    console.log(`Multi-image mode: using ${(perImageLimit / 1024 / 1024).toFixed(2)}MB limit per image for ${totalImages} images`);
+  }
   
   // If file is already under the limit, return as-is
   if (file.size <= opts.maxSizeBytes) {
@@ -197,13 +213,14 @@ export function canCompress(mimeType: string): boolean {
  */
 export async function compressImages(
   files: File[],
-  options: Partial<CompressionOptions> = {}
+  options: Partial<CompressionOptions> = {},
+  isMultiImageMode: boolean = false
 ): Promise<File[]> {
   const results: File[] = [];
   
   for (const file of files) {
     if (canCompress(file.type)) {
-      const compressed = await compressImageIfNeeded(file, options);
+      const compressed = await compressImageIfNeeded(file, options, isMultiImageMode, files.length);
       results.push(compressed);
     } else {
       console.log(`Skipping compression for ${file.name} (type: ${file.type})`);

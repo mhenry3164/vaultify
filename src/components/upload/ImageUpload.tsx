@@ -13,6 +13,7 @@ interface ImageUploadProps {
   maxFiles?: number;
   className?: string;
   resetTrigger?: number; // When this changes, component will reset
+  isMultiImageMode?: boolean; // Whether multi-image mode is enabled
 }
 
 interface ProcessedFile {
@@ -25,7 +26,8 @@ export function ImageUpload({
   onImagesSelected, 
   maxFiles = 5, 
   className,
-  resetTrigger = 0
+  resetTrigger = 0,
+  isMultiImageMode = false
 }: ImageUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<ProcessedFile[]>([]);
   const [isCompressing, setIsCompressing] = useState(false);
@@ -62,7 +64,7 @@ export function ImageUpload({
     
     try {
       // Compress images that exceed size limits
-      const compressedFiles = await compressImages(acceptedFiles);
+      const compressedFiles = await compressImages(acceptedFiles, {}, isMultiImageMode);
       
       const processedFiles = compressedFiles.map((file, index) => {
         const originalFile = acceptedFiles[index];
@@ -118,7 +120,7 @@ export function ImageUpload({
     } finally {
       setIsCompressing(false);
     }
-  }, [selectedFiles, maxFiles, onImagesSelected]);
+  }, [selectedFiles, maxFiles, onImagesSelected, isMultiImageMode]);
 
   // Helper function to create a placeholder preview for HEIC files
   const createHEICPlaceholder = (fileName: string): string => {

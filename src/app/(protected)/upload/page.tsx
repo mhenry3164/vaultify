@@ -265,6 +265,7 @@ export default function UploadPage() {
               onImagesSelected={handleImagesSelected}
               maxFiles={5}
               resetTrigger={resetTrigger}
+              isMultiImageMode={isMultiImageMode}
             />
 
             {/* User Comment Section */}

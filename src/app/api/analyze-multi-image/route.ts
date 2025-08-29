@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { CATEGORY_PIPE_STRING } from '@/lib/categories';
+import sharp from 'sharp';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
@@ -49,7 +50,68 @@ export async function POST(request: NextRequest) {
     
     console.log('All images validation passed, proceeding with multi-image analysis');
 
-    // Convert all images to base64 and prepare content array
+    // Check total payload size and compress if needed
+    const MAX_TOTAL_SIZE_MB = 3.5; // Conservative limit for multi-image requests
+    const MAX_TOTAL_SIZE_BYTES = MAX_TOTAL_SIZE_MB * 1024 * 1024;
+    const totalOriginalSize = images.reduce((sum, img) => sum + img.size, 0);
+    
+    console.log(`Total images size: ${(totalOriginalSize / 1024 / 1024).toFixed(2)}MB for ${images.length} images`);
+    
+    // Process and potentially compress images
+    const processedImages: { buffer: Buffer; mimeType: string }[] = [];
+    let totalProcessedSize = 0;
+    
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      let imageBytes = await image.arrayBuffer();
+      let buffer = Buffer.from(imageBytes);
+      let mimeType = image.type;
+      
+      // If total size is too large, compress more aggressively
+      if (totalOriginalSize > MAX_TOTAL_SIZE_BYTES) {
+        try {
+          // More aggressive compression for multi-image uploads
+          const maxSizePerImage = MAX_TOTAL_SIZE_BYTES / images.length * 0.8; // Use 80% of average allowance
+          
+          if (buffer.length > maxSizePerImage) {
+            console.log(`Compressing image ${i + 1} (${image.name}) from ${(buffer.length / 1024 / 1024).toFixed(2)}MB`);
+            
+            const compressedBuffer = await sharp(buffer)
+              .jpeg({ quality: 60, progressive: true })
+              .resize(1200, 1200, { 
+                fit: 'inside',
+                withoutEnlargement: true 
+              })
+              .toBuffer();
+            
+            buffer = compressedBuffer;
+            mimeType = 'image/jpeg';
+            
+            console.log(`Compressed image ${i + 1} to ${(buffer.length / 1024 / 1024).toFixed(2)}MB`);
+          }
+        } catch (compressionError) {
+          console.error(`Failed to compress image ${i + 1}:`, compressionError);
+          // Continue with original image if compression fails
+        }
+      }
+      
+      processedImages.push({ buffer, mimeType });
+      totalProcessedSize += buffer.length;
+    }
+    
+    console.log(`Final total size: ${(totalProcessedSize / 1024 / 1024).toFixed(2)}MB`);
+    
+    // Final check - if still too large, reject
+    if (totalProcessedSize > MAX_TOTAL_SIZE_BYTES * 1.1) { // Allow 10% buffer
+      return NextResponse.json({ 
+        error: 'Combined image size too large for multi-image processing. Please upload fewer images or smaller images.',
+        totalSize: `${(totalProcessedSize / 1024 / 1024).toFixed(2)}MB`,
+        maxSize: `${MAX_TOTAL_SIZE_MB}MB`,
+        suggestion: 'Try uploading 1-2 images at a time, or compress images before upload'
+      }, { status: 413 });
+    }
+
+    // Convert processed images to base64 and prepare content array
     const contentParts = [];
     
     // Add the prompt first
@@ -96,16 +158,15 @@ export async function POST(request: NextRequest) {
     
     contentParts.push(prompt);
     
-    // Add all images to the content array
-    for (let i = 0; i < images.length; i++) {
-      const image = images[i];
-      const bytes = await image.arrayBuffer();
-      const base64 = Buffer.from(bytes).toString('base64');
+    // Add all processed images to the content array
+    for (let i = 0; i < processedImages.length; i++) {
+      const { buffer, mimeType } = processedImages[i];
+      const base64 = buffer.toString('base64');
       
       contentParts.push({
         inlineData: {
           data: base64,
-          mimeType: image.type
+          mimeType: mimeType
         }
       });
     }
