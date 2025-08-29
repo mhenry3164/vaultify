@@ -5,6 +5,7 @@ import { useDropzone } from 'react-dropzone';
 import { Camera, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { compressImages, canCompress } from '@/utils/imageCompression';
 // Note: HEIC files are processed server-side, no client conversion needed
 
 interface ImageUploadProps {
@@ -17,6 +18,7 @@ interface ImageUploadProps {
 interface ProcessedFile {
   file: File;
   previewUrl: string;
+  isCompressed?: boolean;
 }
 
 export function ImageUpload({ 
@@ -26,6 +28,7 @@ export function ImageUpload({
   resetTrigger = 0
 }: ImageUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<ProcessedFile[]>([]);
+  const [isCompressing, setIsCompressing] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,29 +58,66 @@ export function ImageUpload({
   }, []);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const processedFiles = acceptedFiles.map((file) => {
-      // Check if it's a HEIC file (check both MIME type and file extension)
-      const isHEIC = file.type === 'image/heic' || file.type === 'image/heif' || 
-                    file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
-      
-      let previewUrl: string;
-      
-      if (isHEIC) {
-        // For HEIC files, create a custom preview placeholder
-        // The actual file will be processed server-side
-        previewUrl = createHEICPlaceholder(file.name);
-        console.log('HEIC file detected, will be processed server-side:', file.name);
-      } else {
-        // For standard image files, create normal preview
-        previewUrl = URL.createObjectURL(file);
-      }
-      
-      return { file, previewUrl };
-    });
+    setIsCompressing(true);
     
-    const newFiles = [...selectedFiles, ...processedFiles].slice(0, maxFiles);
-    setSelectedFiles(newFiles);
-    onImagesSelected(newFiles.map(item => item.file));
+    try {
+      // Compress images that exceed size limits
+      const compressedFiles = await compressImages(acceptedFiles);
+      
+      const processedFiles = compressedFiles.map((file, index) => {
+        const originalFile = acceptedFiles[index];
+        const wasCompressed = file !== originalFile;
+        
+        // Check if it's a HEIC file (check both MIME type and file extension)
+        const isHEIC = originalFile.type === 'image/heic' || originalFile.type === 'image/heif' || 
+                      originalFile.name.toLowerCase().endsWith('.heic') || originalFile.name.toLowerCase().endsWith('.heif');
+        
+        let previewUrl: string;
+        
+        if (isHEIC) {
+          // For HEIC files, create a custom preview placeholder
+          // The actual file will be processed server-side
+          previewUrl = createHEICPlaceholder(originalFile.name);
+          console.log('HEIC file detected, will be processed server-side:', originalFile.name);
+        } else {
+          // For standard image files, create normal preview
+          previewUrl = URL.createObjectURL(file);
+        }
+        
+        return { 
+          file, 
+          previewUrl, 
+          isCompressed: wasCompressed 
+        };
+      });
+      
+      const newFiles = [...selectedFiles, ...processedFiles].slice(0, maxFiles);
+      setSelectedFiles(newFiles);
+      onImagesSelected(newFiles.map(item => item.file));
+    } catch (error) {
+      console.error('Error processing images:', error);
+      // Fallback to original behavior if compression fails
+      const processedFiles = acceptedFiles.map((file) => {
+        const isHEIC = file.type === 'image/heic' || file.type === 'image/heif' || 
+                      file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+        
+        let previewUrl: string;
+        
+        if (isHEIC) {
+          previewUrl = createHEICPlaceholder(file.name);
+        } else {
+          previewUrl = URL.createObjectURL(file);
+        }
+        
+        return { file, previewUrl };
+      });
+      
+      const newFiles = [...selectedFiles, ...processedFiles].slice(0, maxFiles);
+      setSelectedFiles(newFiles);
+      onImagesSelected(newFiles.map(item => item.file));
+    } finally {
+      setIsCompressing(false);
+    }
   }, [selectedFiles, maxFiles, onImagesSelected]);
 
   // Helper function to create a placeholder preview for HEIC files
@@ -202,11 +242,17 @@ export function ImageUpload({
           
           <div>
             <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">
-              {isDragActive ? 'Drop images here' : 'Upload asset photos'}
+              {isCompressing ? 'Compressing images...' : isDragActive ? 'Drop images here' : 'Upload asset photos'}
             </h3>
             <p className="text-elegant-400 leading-relaxed">
-              Drag & drop images or click to browse<br />
-              <span className="text-elegant-500 text-sm">JPG, PNG, WEBP, HEIC up to 10MB each</span>
+              {isCompressing ? (
+                'Images over 4MB are being compressed automatically'
+              ) : (
+                <>
+                  Drag & drop images or click to browse<br />
+                  <span className="text-elegant-500 text-sm">JPG, PNG, WEBP, HEIC up to 10MB each (auto-compressed)</span>
+                </>
+              )}
             </p>
           </div>
           
@@ -218,7 +264,7 @@ export function ImageUpload({
                 e.stopPropagation();
                 cameraInputRef.current?.click();
               }}
-              disabled={selectedFiles.length >= maxFiles}
+              disabled={selectedFiles.length >= maxFiles || isCompressing}
             >
               <Camera className="w-4 h-4 mr-2" />
               Take Photo
@@ -230,7 +276,7 @@ export function ImageUpload({
                 e.stopPropagation();
                 fileInputRef.current?.click();
               }}
-              disabled={selectedFiles.length >= maxFiles}
+              disabled={selectedFiles.length >= maxFiles || isCompressing}
             >
               <Upload className="w-4 h-4 mr-2" />
               Browse Files
@@ -268,6 +314,16 @@ export function ImageUpload({
                     <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                   </svg>
                   HEIC
+                </div>
+              )}
+              
+              {/* Show compression indicator for compressed files */}
+              {fileItem.isCompressed && (
+                <div className="absolute top-2 right-2 bg-green-600/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
+                  </svg>
+                  Compressed
                 </div>
               )}
             </div>

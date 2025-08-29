@@ -45,33 +45,42 @@ export async function POST(request: NextRequest) {
     
     console.log('Image validation passed, proceeding with analysis');
 
-    // Convert image to buffer and compress if necessary
+    // Convert image to buffer - images should already be compressed client-side
     let bytes = await image.arrayBuffer();
     const MAX_SIZE_MB = 4.5;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
     
+    // Safety check: If image is still too large after client-side compression
     if (bytes.byteLength > MAX_SIZE_BYTES) {
-      console.log(`Image size (${(bytes.byteLength / 1024 / 1024).toFixed(2)}MB) exceeds ${MAX_SIZE_MB}MB, compressing...`);
+      console.log(`Image size (${(bytes.byteLength / 1024 / 1024).toFixed(2)}MB) exceeds ${MAX_SIZE_MB}MB limit after client compression`);
       
       try {
-        // Compress image while maintaining quality
+        // Fallback server-side compression as last resort
         const compressedBuffer = await sharp(Buffer.from(bytes))
-          .jpeg({ quality: 85, progressive: true })
-          .resize(2048, 2048, { 
+          .jpeg({ quality: 70, progressive: true })
+          .resize(1800, 1800, { 
             fit: 'inside',
             withoutEnlargement: true 
           })
           .toBuffer();
         
         bytes = compressedBuffer.buffer.slice(compressedBuffer.byteOffset, compressedBuffer.byteOffset + compressedBuffer.byteLength) as ArrayBuffer;
-        console.log(`Image compressed from ${(image.size / 1024 / 1024).toFixed(2)}MB to ${(bytes.byteLength / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`Fallback server compression: ${(image.size / 1024 / 1024).toFixed(2)}MB to ${(bytes.byteLength / 1024 / 1024).toFixed(2)}MB`);
+        
+        // If still too large, reject
+        if (bytes.byteLength > MAX_SIZE_BYTES) {
+          throw new Error('Image still too large after aggressive compression');
+        }
       } catch (compressionError) {
-        console.error('Image compression failed:', compressionError);
+        console.error('Server-side compression failed:', compressionError);
         return NextResponse.json({ 
-          error: 'Image compression failed. Please try with a smaller image.',
-          originalSize: `${(bytes.byteLength / 1024 / 1024).toFixed(2)}MB`
+          error: 'Image is too large and could not be compressed sufficiently. Please try with a smaller image or compress it before uploading.',
+          originalSize: `${(image.size / 1024 / 1024).toFixed(2)}MB`,
+          maxSize: `${MAX_SIZE_MB}MB`
         }, { status: 413 });
       }
+    } else {
+      console.log(`Image size (${(bytes.byteLength / 1024 / 1024).toFixed(2)}MB) is within acceptable limits`);
     }
 
     // Convert to base64
