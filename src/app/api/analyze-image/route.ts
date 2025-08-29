@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { CATEGORY_PIPE_STRING } from '@/lib/categories';
+import sharp from 'sharp';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY!);
 
@@ -44,8 +45,36 @@ export async function POST(request: NextRequest) {
     
     console.log('Image validation passed, proceeding with analysis');
 
-    // Convert image to base64
-    const bytes = await image.arrayBuffer();
+    // Convert image to buffer and compress if necessary
+    let bytes = await image.arrayBuffer();
+    const MAX_SIZE_MB = 4.5;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+    
+    if (bytes.byteLength > MAX_SIZE_BYTES) {
+      console.log(`Image size (${(bytes.byteLength / 1024 / 1024).toFixed(2)}MB) exceeds ${MAX_SIZE_MB}MB, compressing...`);
+      
+      try {
+        // Compress image while maintaining quality
+        const compressedBuffer = await sharp(Buffer.from(bytes))
+          .jpeg({ quality: 85, progressive: true })
+          .resize(2048, 2048, { 
+            fit: 'inside',
+            withoutEnlargement: true 
+          })
+          .toBuffer();
+        
+        bytes = compressedBuffer.buffer.slice(compressedBuffer.byteOffset, compressedBuffer.byteOffset + compressedBuffer.byteLength) as ArrayBuffer;
+        console.log(`Image compressed from ${(image.size / 1024 / 1024).toFixed(2)}MB to ${(bytes.byteLength / 1024 / 1024).toFixed(2)}MB`);
+      } catch (compressionError) {
+        console.error('Image compression failed:', compressionError);
+        return NextResponse.json({ 
+          error: 'Image compression failed. Please try with a smaller image.',
+          originalSize: `${(bytes.byteLength / 1024 / 1024).toFixed(2)}MB`
+        }, { status: 413 });
+      }
+    }
+
+    // Convert to base64
     const base64 = Buffer.from(bytes).toString('base64');
 
     // Initialize Gemini Pro Vision
